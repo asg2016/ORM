@@ -1,5 +1,6 @@
 from abc import ABCMeta
 
+
 class Field(metaclass=ABCMeta):
     def __init__(self, name=None, require=False, autoincrement=False,
                  foreign_key=None, nullable=True, max_length=None,
