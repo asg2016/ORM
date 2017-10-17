@@ -13,7 +13,9 @@ class ModelField(object):
         self.not_null = not_null
 
 class ForeignKey(ModelField):
-    pass
+    def __init__(self, autoincrement=True):
+        super().__init__(require=True, autoincrement=autoincrement, foreign=True)
+
 
 class TextField(ModelField):
     def __init__(self, require=False, not_null=False, max_length=0):
@@ -28,7 +30,8 @@ class TextField(ModelField):
         return field_type
 
 class IntField(ModelField):
-    pass
+    def __init__(self, require=False, not_null=False):
+        super().__init__(require=require, not_null=not_null)
 
 class RealField(ModelField):
     pass
