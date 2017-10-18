@@ -42,6 +42,9 @@ class IntField(Field):
 class RealField(Field):
     data_type = 'Real'
 
+class DateTimeField(Field):
+    data_type = 'Text'
+
 class BoolField(Field):
     data_type = 'Text'
 
