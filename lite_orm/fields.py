@@ -2,7 +2,7 @@ from abc import ABCMeta
 
 class Field(metaclass=ABCMeta):
     def __init__(self, name=None, require=False, autoincrement=False,
-                 foreign_key=False, nullable=True, max_length=None,
+                 foreign_key=None, nullable=True, max_length=None,
                  primary_key=False, default=None):
         self.name = name
         self.require = require
@@ -11,12 +11,15 @@ class Field(metaclass=ABCMeta):
         self.nullable = nullable
         self.max_length = max_length
         self.primary_key = primary_key
-        self.default = default
+        if isinstance(default, bool):
+            self.default = str(default)
+        else:
+            self.default = default
 
     def to_sql(self):
         sql = '{0.name} {0.data_type}'.format(self)
         if self.max_length is not None:
-            sql += '({0.max_length})'.format.self
+            sql += '({0.max_length})'.format(self)
         if self.primary_key:
             sql += ' PRIMARY KEY '
         if self.default:
@@ -26,33 +29,23 @@ class Field(metaclass=ABCMeta):
         if self.autoincrement:
             sql += ' AUTOINCREMENT '
         if self.foreign_key:
-            pass
-
-
-
-class ForeignKey(Field):
-    def __init__(self, autoincrement=True):
-        super().__init__(require=True, autoincrement=autoincrement, foreign_key=True)
+            sql += '{}'.format(self.foreign_key.to_sql())
+        return sql
 
 
 class TextField(Field):
-    def __init__(self, require=False, nullable=False, max_length=0):
-        super().__init__(require=require, nullable=nullable)
-        self.max_length=max_length
-        self.value = ''
-
-    def get_type(self):
-        field_type = 'Text'
-        if self.max_length > 0:
-            field_type = ''.join(['String','(',self.max_length,')'])
-        return field_type
+    data_type = 'Text'
 
 class IntField(Field):
-    def __init__(self, require=False, nullable=False):
-        super().__init__(require=require, nullable=nullable)
+    data_type = 'Integer'
 
 class RealField(Field):
-    pass
+    data_type = 'Real'
 
 class BoolField(Field):
-    pass
+    data_type = 'Text'
+
+
+if __name__=='__main__':
+    t = TextField(name="fuckup", autoincrement=True, nullable=True, max_length=50, primary_key=True, default="text")
+    print(t.to_sql())
