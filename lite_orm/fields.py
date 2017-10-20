@@ -51,5 +51,9 @@ class BoolField(Field):
 
 
 if __name__=='__main__':
-    t = TextField(name="fuckup", autoincrement=True, nullable=True, max_length=50, primary_key=True, default="text")
-    print(t.to_sql())
+    pass
+    # f = Field()
+    # f.model = 'model'
+    # print(f.model)
+    # t = TextField(name="fuckup", autoincrement=True, nullable=True, max_length=50, primary_key=True, default="text")
+    # print(t.to_sql())

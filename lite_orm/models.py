@@ -1,34 +1,18 @@
-from . import fields
-
-
 class MetaModel(type):
+    def __init__(cls):
+        print(cls.__class__)
 
-    def __init__(cls, *args, **kwargs):
-        if cls.__table_name__ == '':
-            cls.__table_name__ = cls.__name__
-        cls.__build_model()
+class Model(MetaModel):
+    def __init__(self, **kwargs):
+        pass
 
-    def __build_model(cls):
-        for key, value in cls.__dict__.items():
-            if not key.startswith('__') and value.__class__.__name__.endswith('Field'):
-                if value.data_type == 'int':
-                    cls.__dict__.pop(key,0)
-                    cls.__dict__.update(key=key,value=0)
-
-
-
-class Model(object, metaclass=MetaModel):
-    __table_name__ = ''
-    __database__ = ''
-    __connection__ = None
-    __primary_key__ = None
-    __autoincrement__ = True
 
 
 class TestModel(Model):
-    id = fields.IntField()
+    pass
+    # id = IntField(name='id', require=True, autoincrement=True, primary_key=True)
+    # text = TextField(name='mytext', nullable=True, default='Empty')
 
 
 if __name__=='__main__':
-    t = TestModel()
-    print(t.__dict__)
+    test = TestModel()
