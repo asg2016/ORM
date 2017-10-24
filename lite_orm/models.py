@@ -1,10 +1,10 @@
-class MetaModel(type):
-    def __init__(cls):
-        print(cls.__class__)
-
-class Model(MetaModel):
-    def __init__(self, **kwargs):
+class MetaData(type):
+    def __init__(cls, name, bases, attr_dict):
         pass
+
+
+class Model(MetaData):
+    pass
 
 
 
