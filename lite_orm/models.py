@@ -2,10 +2,10 @@ import sqlite3
 from abc import ABCMeta
 
 class Field(metaclass=ABCMeta):
-    def __init__(self, name=None, require=False,
-                 foreign_key=None, nullable=True, max_length=None,
+    def __init__(self, require=False, foreign_key=None,
+                 nullable=True, max_length=None,
                  primary_key=False, default=None):
-        self.name = name
+        print(self.__dict__)
         self.require = require
         self.foreign_key = foreign_key
         self.nullable = nullable
@@ -58,11 +58,26 @@ class MetaData(type):
         for key, value in attr_dict.items():
             if isinstance(value, Field):
                 cls.__fields__[key] = value
+                cls.__fields__[key].name = '{}.{}'.format(cls.__table_name__, key)
                 fields[key] = value.default
         return fields
 
 
+def _get_model_fields(model):
+    fields = {}
+    for field_name, field_val in model.__dict__.items():
+        if not field_name.startswith('__'):
+            fields[field_name] = field_val
+    return fields
+
+
+def _is_primary_field(model, field_name):
+    return model.__fields__[field_name].primary_key
+
+
 class Model(metaclass=MetaData):
+    primary = []
+    foreing = []
     def __init__(self, **kwargs):
         self.__dict__.update(self.fields)
         for key, val in kwargs.items():
@@ -85,7 +100,7 @@ class Model(metaclass=MetaData):
         self.__connection__.close()
 
     def _table_exists_(self):
-        sql = '''SELECT name FROM sqlite_master WHERE type=? AND name=?'''
+        sql = '''select name from sqlite_master where type=? and name=?'''
         res = self._exec_sql_(sql, ['table', self.__table_name__])
         return len(res)>0
 
@@ -99,17 +114,39 @@ class Model(metaclass=MetaData):
         return data
 
     def _create_table_(self):
-        sql = 'CREATE TABLE {.__table_name__}('.format(self)
+        sql = 'create table {.__table_name__}('.format(self)
         for field_name, field_instance in self.__fields__.items():
             sql += field_instance.to_sql()
         sql = sql[:len(sql)-1] + ');'
         return self._exec_sql_(sql, None)
 
-    def save(self):
-        if self.
+    def save(self, method='update'):
+        primary_field = None
+        sql = ''
+        if method.lower() == 'update':
+            sql = 'Update {.__table_name__} Set '.format(self)
+            for cur_f_name, cur_f_val in self.__fields__.items():
+                if _is_primary_field(self, cur_f_name):
+                    primary_field = cur_f_name
+                    continue
+                if isinstance(self.fields[cur_f_name],str):
+                    sql += '{0}="{1}" ,'.format(cur_f_name, self.fields[cur_f_name])
+                else:
+                    sql += '{0}={1} ,'.format(cur_f_name, self.fields[cur_f_name])
+            sql = sql[:len(sql)-1]
+            sql += ' where {0}={1}'.format(primary_field, self.fields[primary_field])
+        elif method.lower() == 'insert':
+            sql = 'Insert {.__table_name__}('.format(self)
+            for cur_f_name, cur_f_val in cur_fields.items():
+                if not _is_primary_field(cur_f_name):
+                    sql += '{0},'.format(cur_f_name)
+            sql = sql[:len(sql) - 1] + ') values (' + '?'
+        print(sql)
+        return self._exec_sql_(sql, None)
+
 
     def _drop_table_(self):
-        sql = 'DROP TABLE {.__table_name__}'.format(self)
+        sql = 'drop table {.__table_name__}'.format(self)
         return self._exec_sql_(sql, None)
 
     def select(self):
