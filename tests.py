@@ -8,6 +8,5 @@ class TestModel(Model):
 
 if __name__=='__main__':
     test = TestModel()
-    print(test.id)
-    print(test.text)
-    print(test.price)
+    test.text = 'Many tests'
+    price = 19.25
