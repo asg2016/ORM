@@ -111,6 +111,7 @@ class Model(metaclass=MetaData):
         else:
             self.__cursor__.execute(sql)
             data = True
+        self.__connection__.commit()
         return data
 
     def _create_table_(self):
@@ -130,17 +131,24 @@ class Model(metaclass=MetaData):
                     primary_field = cur_f_name
                     continue
                 if isinstance(self.fields[cur_f_name],str):
-                    sql += '{0}="{1}" ,'.format(cur_f_name, self.fields[cur_f_name])
+                    sql += '{0}="{1}" ,'.format(cur_f_name, self.__dict__[cur_f_name])
                 else:
-                    sql += '{0}={1} ,'.format(cur_f_name, self.fields[cur_f_name])
+                    sql += '{0}={1} ,'.format(cur_f_name, self.__dict__[cur_f_name])
             sql = sql[:len(sql)-1]
-            sql += ' where {0}={1}'.format(primary_field, self.fields[primary_field])
+            sql += ' where {0}={1}'.format(primary_field, self.__dict__[primary_field])
         elif method.lower() == 'insert':
-            sql = 'Insert {.__table_name__}('.format(self)
-            for cur_f_name, cur_f_val in cur_fields.items():
-                if not _is_primary_field(cur_f_name):
+            sql = 'Insert Into {.__table_name__}('.format(self)
+            for cur_f_name, cur_f_val in self.__fields__.items():
+                if not _is_primary_field(self, cur_f_name):
                     sql += '{0},'.format(cur_f_name)
-            sql = sql[:len(sql) - 1] + ') values (' + '?'
+            sql = sql[:len(sql) - 1] + ') values ('
+            for cur_f_name, cur_f_val in self.__fields__.items():
+                if not _is_primary_field(self, cur_f_name):
+                    if isinstance(self.fields[cur_f_name], str):
+                        sql += '"{0}",'.format(self.__dict__[cur_f_name])
+                    else:
+                        sql += '{0},'.format(self.__dict__[cur_f_name])
+            sql = sql[:len(sql) - 1] + ')'
         print(sql)
         return self._exec_sql_(sql, None)
 

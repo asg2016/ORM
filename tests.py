@@ -8,6 +8,8 @@ class TestModel(Model):
 
 if __name__=='__main__':
     test = TestModel()
-    test.text = 'Many tests'
-    test.price = 19.28
-    test.save()
+    test.text = 'WOW'
+    test.price = 200
+    print(test.id)
+    success = test.save(method='insert')
+    print(success)
