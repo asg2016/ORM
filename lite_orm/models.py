@@ -109,8 +109,7 @@ class Model(metaclass=MetaData):
         if not params is None:
             data = self.__cursor__.execute(sql, params).fetchall()
         else:
-            self.__cursor__.execute(sql)
-            data = True
+            data = self.__cursor__.execute(sql).fetchall()
         self.__connection__.commit()
         return data
 
@@ -157,8 +156,23 @@ class Model(metaclass=MetaData):
         sql = 'drop table {.__table_name__}'.format(self)
         return self._exec_sql_(sql, None)
 
-    def select(self):
-        pass
+    def select(self, **kwargs):
+        sql = 'Select * From ' + self.__table_name__
+        where = ''
+        for key, val in kwargs.items():
+            where += ' {0} = {1} '.format(key, val)
+        if where != '':
+            sql += ' where' + where
+        data = self._exec_sql_(sql, None)
+        data_models = []
+        for items in data:
+            model_dict = {}
+            for field in self.fields:
+                for value in items:
+                    model_dict[field] = value
+            data_models.append(self.__class__(kwargs=model_dict))
+        return data_models
+
 
     def _upd_(self):
         pass

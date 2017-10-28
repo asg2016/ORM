@@ -12,4 +12,5 @@ if __name__=='__main__':
     test.price = 200
     print(test.id)
     success = test.save(method='insert')
-    print(success)
+    data = TestModel().select()
+    print(data)
