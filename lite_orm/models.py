@@ -2,25 +2,26 @@ import sqlite3
 from abc import ABCMeta
 
 class Field(metaclass=ABCMeta):
-    def __init__(self, require=False, foreign_key=None,
+    def __init__(self, require=False,
                  nullable=True, max_length=None,
                  primary_key=False, default=None):
-        print(self.__dict__)
         self.require = require
-        self.foreign_key = foreign_key
+        self.foreign_key = False
         self.nullable = nullable
         self.max_length = max_length
         self.primary_key = primary_key
         self.default = default
 
-    def to_sql(self):
-        sql = '{0.name} {0.data_type}'.format(self)
+    def to_sql(self, create=False):
+        if create:
+            sql = '{0.short_name} {0.data_type}'.format(self)
+        else:
+            sql = '{0.name} {0.data_type}'.format(self)
         if self.max_length is not None:
             sql += '({0.max_length})'.format(self)
         if self.primary_key:
             sql += ' primary key'
-        if self.default:
-            sql += ' default {0.default}'.format(self)
+        sql += ' default "{0.default}"'.format(self)
         if not self.nullable:
             sql += ' not null'
         else:
@@ -32,13 +33,27 @@ class Field(metaclass=ABCMeta):
 
 
 class TextField(Field):
-    data_type = 'Text'
+    data_type = 'text'
 
 class IntField(Field):
-    data_type = 'Integer'
+    data_type = 'integer'
 
 class RealField(Field):
-    data_type = 'Real'
+    data_type = 'real'
+
+class ForeignKey(Field):
+    data_type = 'integer'
+    def __init__(self, model=None):
+        self.model = model()
+        self.short_name = 'id'
+        self.name = '{}.{}'.format(model.__table_name__,'id')
+        self.local_name = '{}_{}'.format(model.__table_name__.lower(),'id')
+        self.join_table = model.__table_name__
+        self.foreign_key = True
+
+    def to_sql(self):
+        sql = '{0.local_name} {0.data_type}'.format(self)
+        return sql
 
 class MetaData(type):
     def __init__(cls, name, bases, attr_dict):
@@ -56,10 +71,13 @@ class MetaData(type):
     def __set_fields__(cls, attr_dict):
         fields = {}
         for key, value in attr_dict.items():
-            if isinstance(value, Field):
+            if isinstance(value, Field) and value.foreign_key == False:
                 cls.__fields__[key] = value
                 cls.__fields__[key].name = '{}.{}'.format(cls.__table_name__, key)
+                cls.__fields__[key].short_name = key
                 fields[key] = value.default
+            elif isinstance(value, Field) and value.foreign_key == True:
+                cls.__fields__['foreign_key'] = value
         return fields
 
 
@@ -76,12 +94,10 @@ def _is_primary_field(model, field_name):
 
 
 class Model(metaclass=MetaData):
-    primary = []
-    foreing = []
     def __init__(self, **kwargs):
         self.__dict__.update(self.fields)
         for key, val in kwargs.items():
-            setattr(self, key, val)
+            self.__dict__.update(val)
         self._connect_()
         if not self._table_exists_():
             self._create_table_()
@@ -102,6 +118,7 @@ class Model(metaclass=MetaData):
     def _table_exists_(self):
         sql = '''select name from sqlite_master where type=? and name=?'''
         res = self._exec_sql_(sql, ['table', self.__table_name__])
+        print(sql)
         return len(res)>0
 
     def _exec_sql_(self, sql, params):
@@ -111,13 +128,16 @@ class Model(metaclass=MetaData):
         else:
             data = self.__cursor__.execute(sql).fetchall()
         self.__connection__.commit()
+        # if len(data) == 1:
+        #     return data[0]
         return data
 
     def _create_table_(self):
         sql = 'create table {.__table_name__}('.format(self)
         for field_name, field_instance in self.__fields__.items():
-            sql += field_instance.to_sql()
+            sql += field_instance.to_sql(True)
         sql = sql[:len(sql)-1] + ');'
+        print(sql)
         return self._exec_sql_(sql, None)
 
     def save(self, method='update'):
@@ -148,7 +168,6 @@ class Model(metaclass=MetaData):
                     else:
                         sql += '{0},'.format(self.__dict__[cur_f_name])
             sql = sql[:len(sql) - 1] + ')'
-        print(sql)
         return self._exec_sql_(sql, None)
 
 
@@ -165,11 +184,10 @@ class Model(metaclass=MetaData):
             sql += ' where' + where
         data = self._exec_sql_(sql, None)
         data_models = []
-        for items in data:
+        for values in data:
             model_dict = {}
-            for field in self.fields:
-                for value in items:
-                    model_dict[field] = value
+            for id_val, field in enumerate(self.fields):
+                model_dict[field] = values[id_val]
             data_models.append(self.__class__(kwargs=model_dict))
         return data_models
 
