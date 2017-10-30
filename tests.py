@@ -17,7 +17,7 @@ class Goods(Model):
     option2 = TextField(nullable=True)
     option3 = TextField(nullable=True)
     price = RealField(nullable=False, default=0)
-    category = ForeignKey(model=Category)
+    #category = ForeignKey(model=Category)
 
     def __str__(self):
         return self.title

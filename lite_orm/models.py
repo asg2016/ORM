@@ -1,66 +1,18 @@
 import sqlite3
-from abc import ABCMeta
+from .helpers import _get_model_fields, _is_primary_field
+from .query import Connection
 
-class Field(metaclass=ABCMeta):
-    def __init__(self, require=False,
-                 nullable=True, max_length=None,
-                 primary_key=False, default=None):
-        self.require = require
-        self.foreign_key = False
-        self.nullable = nullable
-        self.max_length = max_length
-        self.primary_key = primary_key
-        self.default = default
-
-    def to_sql(self, create=False):
-        if create:
-            sql = '{0.short_name} {0.data_type}'.format(self)
-        else:
-            sql = '{0.name} {0.data_type}'.format(self)
-        if self.max_length is not None:
-            sql += '({0.max_length})'.format(self)
-        if self.primary_key:
-            sql += ' primary key'
-        sql += ' default "{0.default}"'.format(self)
-        if not self.nullable:
-            sql += ' not null'
-        else:
-            sql += ' null'
-        if self.foreign_key:
-            sql += '{}'.format(self.foreign_key.to_sql())
-        sql += ','
-        return sql
-
-
-class TextField(Field):
-    data_type = 'text'
-
-class IntField(Field):
-    data_type = 'integer'
-
-class RealField(Field):
-    data_type = 'real'
-
-class ForeignKey(Field):
-    data_type = 'integer'
-    def __init__(self, model=None):
-        self.model = model()
-        self.short_name = 'id'
-        self.name = '{}.{}'.format(model.__table_name__,'id')
-        self.local_name = '{}_{}'.format(model.__table_name__.lower(),'id')
-        self.join_table = model.__table_name__
-        self.foreign_key = True
-
-    def to_sql(self):
-        sql = '{0.local_name} {0.data_type}'.format(self)
-        return sql
 
 class MetaData(type):
+    __fields__ = {}
     def __init__(cls, name, bases, attr_dict):
         cls.__set_attr__('__table_name__', attr_dict, cls.__name__)
-        cls.__set_attr__('__db__', attr_dict, 'base.db')
-        cls.__fields__ = {}
-        cls.fields = cls.__set_fields__(attr_dict)
+        for field, field_ins in attr_dict.items():
+
+        # cls.__connection__ = Connection(cls, 'base.db',cls.__table_name__)
+        # cls.__set_attr__('__db__', attr_dict, 'base.db')
+        # cls
+        # cls.__fields__ = _get_model_fields(cls)
 
     def __set_attr__(cls, attr, attr_dict, def_val):
         if attr in attr_dict:
@@ -68,39 +20,16 @@ class MetaData(type):
         else:
             setattr(cls, attr, def_val)
 
-    def __set_fields__(cls, attr_dict):
-        fields = {}
-        for key, value in attr_dict.items():
-            if isinstance(value, Field) and value.foreign_key == False:
-                cls.__fields__[key] = value
-                cls.__fields__[key].name = '{}.{}'.format(cls.__table_name__, key)
-                cls.__fields__[key].short_name = key
-                fields[key] = value.default
-            elif isinstance(value, Field) and value.foreign_key == True:
-                cls.__fields__['foreign_key'] = value
-        return fields
-
-
-def _get_model_fields(model):
-    fields = {}
-    for field_name, field_val in model.__dict__.items():
-        if not field_name.startswith('__'):
-            fields[field_name] = field_val
-    return fields
-
-
-def _is_primary_field(model, field_name):
-    return model.__fields__[field_name].primary_key
-
-
 class Model(metaclass=MetaData):
     def __init__(self, **kwargs):
         self.__dict__.update(self.fields)
+        print(kwargs)
         for key, val in kwargs.items():
-            self.__dict__.update(val)
-        self._connect_()
-        if not self._table_exists_():
-            self._create_table_()
+            if val['__qualname__'] == self.__class__.__name__:
+                self.__dict__.update(val)
+        # self._connect_()
+        # if not self._table_exists_():
+        #     self._create_table_()
 
     def __del__(self):
         if self.__connection__:
@@ -191,12 +120,3 @@ class Model(metaclass=MetaData):
             data_models.append(self.__class__(kwargs=model_dict))
         return data_models
 
-
-    def _upd_(self):
-        pass
-
-    def _ins_(self):
-        pass
-
-    def _del_(self):
-        pass

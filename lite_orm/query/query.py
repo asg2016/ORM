@@ -1,6 +1,26 @@
-# -*- coding:utf-8 -*-
+import sqlite3
 
-# To Generate string
+class Connection:
+    def __init__(self, model, dbfile, table_name):
+        self.dbfile = dbfile
+        self.model = model
+        self.table_name = table_name
+        self.db_instance = sqlite3.connect(dbfile)
+        self.cursor = self.db_instance.cursor()
+
+    def commit(self):
+        self.db_instance.commit()
+
+    def __del__(self):
+        self.commit()
+        self.cursor.close()
+        self.db_instance.close()
+
+    def do_sql(self, sql):
+        pass
+
+
+
 def Dict2Str(dictin,joiner=','):
     # make dict to str, with the format key='value'
     #tmpstr=''
