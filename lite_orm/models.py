@@ -1,35 +1,49 @@
 import sqlite3
-from .helpers import _get_model_fields, _is_primary_field
+from .fields import *
 from .query import Connection
+
+def _get_fields(attrs):
+    fields = {}
+    fk_fields = {}
+    for field_name, field_val in attrs.items():
+        if not field_name.startswith('__') \
+                and isinstance(field_val, Field):
+            if not field_val.foreign_key:
+                fields[field_name] = field_val
+            else:
+                fk_fields[field_name] = field_val
+    return fields, fk_fields
+
+
+def _get_default_dict(_fields):
+    def_dict = {}
+    for field, field_ins in _fields.items():
+        def_dict[field] = field_ins.default
+    return def_dict
 
 
 class MetaData(type):
     __fields__ = {}
+    __foreign_key__ = {}
+    __default__ = {}
     def __init__(cls, name, bases, attr_dict):
-        cls.__set_attr__('__table_name__', attr_dict, cls.__name__)
-        for field, field_ins in attr_dict.items():
+        if name == cls.__name__:
+            setattr(cls, '__table_name__', cls.__name__)
+            cls.__fields__, cls.__foreign_key__ = _get_fields(cls.__dict__)
+            cls.__default__ = _get_default_dict(cls.__fields__)
+            for field, field_def in cls.__default__.items():
+                setattr(cls, field, field_def)
 
-        # cls.__connection__ = Connection(cls, 'base.db',cls.__table_name__)
-        # cls.__set_attr__('__db__', attr_dict, 'base.db')
-        # cls
-        # cls.__fields__ = _get_model_fields(cls)
-
-    def __set_attr__(cls, attr, attr_dict, def_val):
-        if attr in attr_dict:
-            setattr(cls, attr, attr_dict[attr])
-        else:
-            setattr(cls, attr, def_val)
 
 class Model(metaclass=MetaData):
+    __connection__ = None
+    __db__ = 'base.db'
     def __init__(self, **kwargs):
-        self.__dict__.update(self.fields)
-        print(kwargs)
-        for key, val in kwargs.items():
-            if val['__qualname__'] == self.__class__.__name__:
-                self.__dict__.update(val)
-        # self._connect_()
-        # if not self._table_exists_():
-        #     self._create_table_()
+        if len(self.__dict__.keys()) == 0:
+            self.__dict__.update(self.__default__)
+        self._connect_()
+        if not self._table_exists_():
+            self._create_table_()
 
     def __del__(self):
         if self.__connection__:
@@ -47,7 +61,6 @@ class Model(metaclass=MetaData):
     def _table_exists_(self):
         sql = '''select name from sqlite_master where type=? and name=?'''
         res = self._exec_sql_(sql, ['table', self.__table_name__])
-        print(sql)
         return len(res)>0
 
     def _exec_sql_(self, sql, params):
@@ -57,8 +70,8 @@ class Model(metaclass=MetaData):
         else:
             data = self.__cursor__.execute(sql).fetchall()
         self.__connection__.commit()
-        # if len(data) == 1:
-        #     return data[0]
+        if len(data) == 1:
+            return data[0]
         return data
 
     def _create_table_(self):
@@ -119,4 +132,3 @@ class Model(metaclass=MetaData):
                 model_dict[field] = values[id_val]
             data_models.append(self.__class__(kwargs=model_dict))
         return data_models
-

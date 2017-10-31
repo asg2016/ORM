@@ -16,6 +16,9 @@ class Connection:
         self.cursor.close()
         self.db_instance.close()
 
+    def create_table(self, table_dict):
+        pass
+
     def do_sql(self, sql):
         pass
 

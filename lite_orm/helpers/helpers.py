@@ -1,9 +1,16 @@
-def _get_model_fields(model):
+def _get_fields(attrs):
     fields = {}
-    for field_name, field_val in model.__dict__.items():
+    for field_name, field_val in attrs.items():
         if not field_name.startswith('__'):
             fields[field_name] = field_val
     return fields
+
+
+def _get_default_dict(_fields):
+    def_dict = {}
+    for field, field_ins in _fields.items():
+        def_dict[field] = field_ins.default
+    return def_dict
 
 
 def _is_primary_field(model, field_name):
